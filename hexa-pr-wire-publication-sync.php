@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Hexa PR Wire Publication Sync
  * Description: Secure async control plane for Hexa PR Wire publication imports powered by Echo RSS.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Hexa Web Systems
  */
 
@@ -771,16 +771,17 @@ final class Hexa_PR_Wire_Publication_Sync {
 		$feed_items = self::fetch_feed_items( $effective_feed_url );
 		$job['result']['feed_items_discovered'] = count( $feed_items );
 		$job['result']['feed_source_urls']      = wp_list_pluck( $feed_items, 'source_url' );
-		$job['result']['last_url_processed']    = ! empty( $feed_items ) ? end( $feed_items )['source_url'] : '';
 		self::append_job_log( $job, 'Feed fetched successfully with ' . count( $feed_items ) . ' items.' );
 
 		$targets                           = self::resolve_targets( $job, $before_map );
 		$job['result']['targets']          = $targets;
 		$job['result']['target_feed_hits'] = self::filter_feed_items_by_targets( $feed_items, $targets );
+		$result_feed_items                 = self::should_limit_results_to_targets( $targets ) ? $job['result']['target_feed_hits'] : $feed_items;
+		$job['result']['last_url_processed'] = ! empty( $result_feed_items ) ? end( $result_feed_items )['source_url'] : ( ! empty( $feed_items ) ? end( $feed_items )['source_url'] : '' );
 		self::save_job( $job );
 
 		if ( ! empty( $job['dry_run'] ) ) {
-			$job['result'] = array_merge( $job['result'], self::build_dry_run_sync_result( $before_map, $feed_items, $targets ) );
+			$job['result'] = array_merge( $job['result'], self::build_dry_run_sync_result( $before_map, $result_feed_items, $targets ) );
 			$job['status_message'] = 'Dry run complete.';
 			self::append_job_log( $job, 'Dry run complete. No posts were modified.' );
 			return $job;
@@ -794,7 +795,7 @@ final class Hexa_PR_Wire_Publication_Sync {
 		$job['result']['after_count'] = count( $after_map['source_urls'] );
 		$job['result']                = array_merge(
 			$job['result'],
-			self::build_sync_result( $before_map, $after_map, $feed_items, $targets )
+			self::build_sync_result( $before_map, $after_map, $result_feed_items, $targets )
 		);
 		$job['result']['echo_log_tail'] = self::get_echo_log_tail( $job );
 		$job['status_message']          = 'Sync finished.';
@@ -1112,6 +1113,10 @@ final class Hexa_PR_Wire_Publication_Sync {
 			'feed_urls_discovered'  => $feed_source_urls,
 			'up_to_date'            => empty( $new_source_urls ),
 		);
+	}
+
+	private static function should_limit_results_to_targets( array $targets ) {
+		return ! empty( $targets['source_slugs'] ) || ! empty( $targets['source_urls'] ) || ! empty( $targets['local_post_ids'] );
 	}
 
 	private static function fetch_feed_items( $feed_url ) {

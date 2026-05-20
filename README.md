@@ -96,6 +96,9 @@ Deployment notes:
 
 Changelog:
 
+- `1.0.3`
+  - Fixed targeted sync reporting so update/refetch jobs scoped to specific items report only those requested targets.
+  - Corrected `last_url_processed` for targeted sync jobs to reflect the final matched target instead of the end of the full feed.
 - `1.0.2`
   - Added first-load bootstrap so fresh installs self-create their token and job index.
   - Verified cross-site install workflow against `peresdaily.com`.
