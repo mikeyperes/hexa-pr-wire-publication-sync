@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Hexa PR Wire Publication Sync
  * Description: Secure async control plane for Hexa PR Wire publication imports powered by Echo RSS.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Hexa Web Systems
  */
 
@@ -24,6 +24,7 @@ final class Hexa_PR_Wire_Publication_Sync {
 	const RULE_IDENTITY   = 37;
 
 	public static function init() {
+		self::maybe_bootstrap_settings();
 		add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
 		add_action( self::CRON_HOOK, array( __CLASS__, 'cron_execute_job' ) );
 		add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
@@ -1425,6 +1426,35 @@ final class Hexa_PR_Wire_Publication_Sync {
 				'default_rule_id' => '',
 			)
 		);
+	}
+
+	private static function maybe_bootstrap_settings() {
+		$settings = get_option( self::OPTION_KEY, null );
+		$settings = is_array( $settings ) ? $settings : array();
+		$changed  = false;
+
+		if ( empty( $settings['secret_token'] ) ) {
+			$settings['secret_token'] = self::generate_secret();
+			$changed                  = true;
+		}
+
+		if ( empty( $settings['allowed_host'] ) ) {
+			$settings['allowed_host'] = 'hexaprwire.com';
+			$changed                  = true;
+		}
+
+		if ( ! array_key_exists( 'default_rule_id', $settings ) ) {
+			$settings['default_rule_id'] = '';
+			$changed                     = true;
+		}
+
+		if ( $changed || null === get_option( self::OPTION_KEY, null ) ) {
+			update_option( self::OPTION_KEY, $settings, false );
+		}
+
+		if ( false === get_option( self::JOB_INDEX_KEY, false ) ) {
+			add_option( self::JOB_INDEX_KEY, array(), '', false );
+		}
 	}
 
 	private static function save_job( array $job ) {

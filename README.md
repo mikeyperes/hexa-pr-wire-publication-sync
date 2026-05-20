@@ -96,6 +96,9 @@ Deployment notes:
 
 Changelog:
 
+- `1.0.2`
+  - Added first-load bootstrap so fresh installs self-create their token and job index.
+  - Verified cross-site install workflow against `peresdaily.com`.
 - `1.0.1`
   - Added async publication control plane for Hexa PR Wire imports.
   - Added JSON job creation and status endpoints.
